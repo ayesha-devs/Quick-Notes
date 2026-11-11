@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notes App</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f4f6f8;
+      color: #1f2937;
+      margin: 0;
+      padding: 24px 16px;
+    }
+
+    .box {
+      max-width: 640px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      text-align: center;
+      margin: 0 0 20px;
+      font-size: 2rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      resize: vertical;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 0.95rem;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #fff;
+      transition: background 0.15s;
+    }
+
+    .add {
+      background: #2563eb;
+      padding: 10px 28px;
+    }
+
+    .add:hover {
+      background: #1d4ed8;
+    }
+
+    #list {
+      margin-top: 20px;
+    }
+
+    .note {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      background: #eef2ff;
+      border-left: 4px solid #2563eb;
+      padding: 12px 14px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+
+    .note-text {
+      flex: 1;
+      min-width: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+    }
+
+    .note-time {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    .del {
+      background: #dc2626;
+      padding: 6px 12px;
+      flex-shrink: 0;
+    }
+
+    .del:hover {
+      background: #b91c1c;
+    }
+
+    .empty {
+      text-align: center;
+      color: #6b7280;
+      padding: 20px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h1>Notes App</h1>
+
+    <textarea id="content" placeholder="Write a note..."></textarea>
+    <div class="actions">
+      <span class="hint">Ctrl + Enter to save</span>
+      <button class="add" onclick="addNote()">Add</button>
+    </div>
+
+    <div id="list"></div>
+  </div>
+
+  <script>
+    function formatTime(value) {
+      // SQLite stores UTC like "2026-11-11 19:06:12"
+      const d = new Date(value.replace(' ', 'T') + 'Z');
+      return isNaN(d) ? value : d.toLocaleString();
+    }
+
+    async function loadNotes() {
+      const list = document.getElementById('list');
+      try {
+        const res = await fetch('/api/notes');
+        const notes = await res.json();
+        list.innerHTML = '';
+
+        if (!Array.isArray(notes) || notes.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'No notes yet. Write your first note above.';
+          list.appendChild(empty);
+          return;
+        }
+
+        notes.forEach(n => {
+          const div = document.createElement('div');
+          div.className = 'note';
+
+          const wrap = document.createElement('div');
+          wrap.className = 'note-text';
+
+          const text = document.createElement('span');
+          text.textContent = n.content;
+
+          const time = document.createElement('small');
+          time.className = 'note-time';
+          time.textContent = formatTime(n.created_at);
+
+          wrap.appendChild(text);
+          wrap.appendChild(time);
+
+          const btn = document.createElement('button');
+          btn.className = 'del';
+          btn.textContent = 'Delete';
+          btn.onclick = () => deleteNote(n.id);
+
+          div.appendChild(wrap);
+          div.appendChild(btn);
+          list.appendChild(div);
+        });
+      } catch (err) {
+        list.textContent = 'Could not load notes.';
+      }
+    }
+
+    async function addNote() {
+      const box = document.getElementById('content');
+      if (!box.value.trim()) return;
+      try {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: box.value })
+        });
+        if (!res.ok) throw new Error('Request failed');
+        box.value = '';
+        loadNotes();
+      } catch (err) {
+        alert('Could not save the note.');
+      }
+    }
+
+    async function deleteNote(id) {
+      try {
+        await fetch('/api/notes/' + id, { method: 'DELETE' });
+        loadNotes();
+      } catch (err) {
+        alert('Could not delete the note.');
+      }
+    }
+
+    document.getElementById('content').addEventListener('keydown', e => {
+      if (e.ctrlKey && e.key === 'Enter') addNote();
+    });
+
+    loadNotes();
+  </script>
+</body>
+
+</html>

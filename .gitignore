@@ -45,3 +45,5 @@ instance/
 
 # Environment variables
 .env
+
+notes.db
