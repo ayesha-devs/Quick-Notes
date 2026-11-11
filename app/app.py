@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pymysql
 import pymysql.cursors
@@ -39,12 +39,12 @@ def init_db(retries=10, delay=3):
                 ''')
             conn.commit()
             conn.close()
-            print('Database ready')
+            print('Database ready', flush=True)
             return
         except Exception as e:
-            print(f'DB not ready (attempt {attempt}/{retries}): {e}')
+            print(f'DB not ready (attempt {attempt}/{retries}): {e}', flush=True)
             time.sleep(delay)
-    print('Could not connect to the database')
+    print('Could not connect to the database', flush=True)
 
 
 def note_to_dict(note):
@@ -53,12 +53,6 @@ def note_to_dict(note):
         'content': note['content'],
         'created_at': note['created_at'].strftime('%Y-%m-%d %H:%M:%S'),
     }
-
-
-@app.route('/')
-def index():
-    """Serve the main page."""
-    return render_template('index.html')
 
 
 @app.route('/health')

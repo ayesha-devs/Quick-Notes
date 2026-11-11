@@ -10,10 +10,8 @@ services:
       timeout: 5s
       retries: 20
 
-  web:
-    build: .
-    ports:
-      - "5000:5000"
+  app:
+    build: ./app
     environment:
       DB_HOST: db
       DB_USER: root
@@ -22,3 +20,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  web:
+    build: ./web
+    ports:
+      - "8080:80"
+    environment:
+      APP_HOST: app
+    depends_on:
+      - app
